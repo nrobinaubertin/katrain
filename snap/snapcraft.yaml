@@ -1,0 +1,77 @@
+name: katrain
+base: core22
+version: '1.14-1'
+summary: Go/Baduk/Weiqi playing and teaching app with a variety of AIs
+description: |
+  KaTrain is a tool for analyzing games and playing go with AI feedback from KataGo:
+  - Review your games to find the moves that were most costly in terms of points lost.
+  - Play against AI and get immediate feedback on mistakes with option to retry.
+  - Play against a wide range of weakened versions of AI with various styles.
+  - Automatically generate focused SGF reviews which show your biggest mistakes.
+grade: devel
+confinement: devmode # use 'strict' once you have the right plugs and slots
+
+parts:
+  # libzip5:
+  #   # https://packages.ubuntu.com/focal/amd64/libzip5/download
+  #   plugin: dump
+  #   source: http://mirrors.kernel.org/ubuntu/pool/universe/libz/libzip/libzip5_1.5.1-0ubuntu1_amd64.deb
+  #   source-type: deb
+  #   source-checksum: sha256/cfe2a62399352e04289f0608e2e6e105a714005e2466690a854d07e2efb6f905
+  # libssl1.1:
+  #   # https://packages.ubuntu.com/focal/amd64/libssl1.1/download
+  #   plugin: dump
+  #   source: http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.22_amd64.deb
+  #   source-type: deb
+  #   source-checksum: sha256/df9d07d552aab0c7e5b9fbcc568913acd20d50fb8b1e34876fa348b7a0c82d48
+  katrain:
+    plugin: python
+    source: .
+    python-requirements: [./requirements.txt]
+    build-packages:
+      - build-essential
+      - ffmpeg
+      - git
+      - gstreamer1.0-plugins-base
+      - gstreamer1.0-plugins-good
+      - libavcodec-dev
+      - libavdevice-dev
+      - libavfilter-dev
+      - libavformat-dev
+      - libgl-dev
+      - libportmidi-dev
+      - libsdl1.2-dev
+      - libsdl2-dev
+      - libsdl2-image-dev
+      - libsdl2-mixer-dev
+      - libsdl2-ttf-dev
+      - libswscale-dev
+      - libzip-dev
+      - ocl-icd-opencl-dev
+      - opencl-headers
+      - pkg-config
+      - zlib1g-dev
+      - python3-venv
+    stage-packages:
+      - ffmpeg
+      - freeglut3
+      - libgl1-mesa-dev
+      - libgl1-mesa-dri
+      - libglu1-mesa
+      - libgstreamer1.0-0
+      - libmtdev1
+      - libpulse0
+      - libstdc++6
+      - mesa-opencl-icd
+      - python3-venv
+      - xclip
+      - xsel
+    override-build: |
+      rm -rf ./build/lib/katrain/KataGo
+      craftctl default
+apps:
+  katrain:
+    command: /bin/python3 -m katrain -d
+    environment:
+      LD_LIBRARY_PATH: "$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET:$SNAP/lib/$SNAPCRAFT_ARCH_TRIPLET:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/dri"
+      LIBGL_DRIVERS_PATH: "$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/dri"
