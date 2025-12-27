@@ -1,9 +1,12 @@
+import os
+
 PROGRAM_NAME = "KaTrain"
 VERSION = "1.17.1"
 HOMEPAGE = "https://github.com/sanderland/katrain"
 CONFIG_MIN_VERSION = "1.17.0"  # keep config files from this version
 ANALYSIS_FORMAT_VERSION = "1.0"
-DATA_FOLDER = "~/.katrain"
+# Use SNAP_USER_COMMON in snap environment (user-writable, shared across versions)
+DATA_FOLDER = os.environ.get("SNAP_USER_COMMON", "~/.katrain")
 
 
 OUTPUT_ERROR = -1

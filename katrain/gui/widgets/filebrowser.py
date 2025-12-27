@@ -94,14 +94,24 @@ def get_drives():
         places = (sep + "mnt", sep + "media")
         for place in places:
             if isdir(place):
-                for directory in next(walk(place))[1]:
-                    drives.append((place + sep + directory, directory))
+                try:
+                    # Provide default tuple if walk returns empty iterator
+                    subdirs = next(walk(place), (None, [], None))[1]
+                    for directory in subdirs:
+                        drives.append((place + sep + directory, directory))
+                except (StopIteration, PermissionError, OSError):
+                    # Skip if directory is inaccessible (common in snap)
+                    pass
     elif platform == "macosx" or platform == "ios":
         drives.append((expanduser("~"), "~/"))
         vol = sep + "Volume"
         if isdir(vol):
-            for drive in next(walk(vol))[1]:
-                drives.append((vol + sep + drive, drive))
+            try:
+                subdirs = next(walk(vol), (None, [], None))[1]
+                for drive in subdirs:
+                    drives.append((vol + sep + drive, drive))
+            except (StopIteration, PermissionError, OSError):
+                pass
     return drives
 
 
@@ -308,10 +318,15 @@ class LinkTree(TreeView):
         if not node.path or node.nodes:
             return
         parent = node.path
-        _next = next(walk(parent))
-        if _next:
-            for path in _next[1]:
-                self.add_node(TreeLabel(text=path, path=parent + sep + path), node)
+        try:
+            # Provide default tuple if walk returns empty iterator
+            _next = next(walk(parent), (None, [], None))
+            if _next and _next[1]:  # Check if subdirectories exist
+                for path in _next[1]:
+                    self.add_node(TreeLabel(text=path, path=parent + sep + path), node)
+        except (StopIteration, PermissionError, OSError):
+            # Directory not accessible, skip population
+            pass
 
 
 class I18NFileBrowser(BoxLayout):

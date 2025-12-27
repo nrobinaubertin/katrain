@@ -5,6 +5,7 @@ import platform
 import queue
 import shlex
 import subprocess
+import sys
 import threading
 import time
 import traceback
@@ -85,6 +86,7 @@ class BaseEngine:  # some common elements between analysis and contribute engine
                 self.on_error(i18n._("Kata exe not found in path").format(exe=exe), "KATAGO-EXE")
                 return None
             exe = exe_with_paths[0]
+
         return exe
 
     def on_error(self, message, code, allow_popup):

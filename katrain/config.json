@@ -1,6 +1,6 @@
 {
     "engine": {
-        "katago": "",
+        "katago": "katrain/KataGo/katago",
         "altcommand": "",
         "model": "katrain/models/kata1-b18c384nbt-s9996604416-d4316597426.bin.gz",
         "humanlike_model": "",
@@ -12,7 +12,7 @@
         "_enable_ownership": true
     },
     "contribute": {
-        "katago": "",
+        "katago": "katrain/KataGo/katago",
         "config": "katrain/KataGo/contribute_config.cfg",
         "ownership": false,
         "maxgames": 6,

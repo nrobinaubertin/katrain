@@ -1,5 +1,7 @@
+import glob
 import heapq
 import math
+import os
 from pathlib import Path
 import random
 import struct
@@ -46,11 +48,21 @@ def find_package_resource(path, silent_errors=False):
     global PATHS
     if path.startswith("katrain"):
         if not PATHS.get("PACKAGE"):
-            try:
-                PATHS["PACKAGE"] = str(pkg_resources.files("katrain").absolute())
-            except (ModuleNotFoundError, FileNotFoundError, ValueError) as e:
-                print(f"Package path not found, installation possibly broken. Error: {e}", file=sys.stderr)
-                return f"FILENOTFOUND/{path}"
+            # In snap environment, use $SNAP path to avoid finding source directory
+            snap_path = os.environ.get("SNAP")
+            if snap_path:
+                # Find katrain package in snap
+                import glob
+                snap_katrain = glob.glob(f"{snap_path}/lib/python*/site-packages/katrain")
+                if snap_katrain:
+                    PATHS["PACKAGE"] = snap_katrain[0]
+
+            if not PATHS.get("PACKAGE"):
+                try:
+                    PATHS["PACKAGE"] = str(pkg_resources.files("katrain").absolute())
+                except (ModuleNotFoundError, FileNotFoundError, ValueError) as e:
+                    print(f"Package path not found, installation possibly broken. Error: {e}", file=sys.stderr)
+                    return f"FILENOTFOUND/{path}"
         return str(Path(PATHS["PACKAGE"]) / path.replace("katrain\\", "katrain/").replace("katrain/", ""))
     else:
         return str(Path(path).expanduser().absolute())

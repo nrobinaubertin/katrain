@@ -1,6 +1,6 @@
 name: katrain
 base: core22
-version: '1.14-1'
+version: '1.17.1'
 summary: Go/Baduk/Weiqi playing and teaching app with a variety of AIs
 description: |
   KaTrain is a tool for analyzing games and playing go with AI feedback from KataGo:
@@ -8,26 +8,19 @@ description: |
   - Play against AI and get immediate feedback on mistakes with option to retry.
   - Play against a wide range of weakened versions of AI with various styles.
   - Automatically generate focused SGF reviews which show your biggest mistakes.
-grade: devel
-confinement: devmode # use 'strict' once you have the right plugs and slots
+grade: stable
+confinement: strict
+
+plugs:
+  graphics-core22:
+    interface: content
+    target: $SNAP/graphics
+    default-provider: mesa-core22
 
 parts:
-  # libzip5:
-  #   # https://packages.ubuntu.com/focal/amd64/libzip5/download
-  #   plugin: dump
-  #   source: http://mirrors.kernel.org/ubuntu/pool/universe/libz/libzip/libzip5_1.5.1-0ubuntu1_amd64.deb
-  #   source-type: deb
-  #   source-checksum: sha256/cfe2a62399352e04289f0608e2e6e105a714005e2466690a854d07e2efb6f905
-  # libssl1.1:
-  #   # https://packages.ubuntu.com/focal/amd64/libssl1.1/download
-  #   plugin: dump
-  #   source: http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.22_amd64.deb
-  #   source-type: deb
-  #   source-checksum: sha256/df9d07d552aab0c7e5b9fbcc568913acd20d50fb8b1e34876fa348b7a0c82d48
   katrain:
     plugin: python
     source: .
-    python-requirements: [./requirements.txt]
     build-packages:
       - build-essential
       - ffmpeg
@@ -67,11 +60,31 @@ parts:
       - xclip
       - xsel
     override-build: |
-      rm -rf ./build/lib/katrain/KataGo
       craftctl default
+      # Ensure KataGo binary is executable
+      KATAGO_DIR=$(find ${SNAPCRAFT_PART_INSTALL}/lib -type d -path "*/katrain/KataGo" | head -1)
+      if [ -n "$KATAGO_DIR" ]; then
+        echo "Found KataGo directory: $KATAGO_DIR"
+        chmod +x "$KATAGO_DIR"/katago
+        echo "KataGo binary is ready at $KATAGO_DIR/katago"
+      else
+        echo "Warning: KataGo directory not found"
+      fi
 apps:
   katrain:
-    command: /bin/python3 -m katrain -d
+    command: bin/python3 -m katrain
+    extensions: [gnome]
+    plugs:
+      - home
+      - network
+      - network-bind
+      - opengl
+      - audio-playback
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - unity7
     environment:
-      LD_LIBRARY_PATH: "$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET:$SNAP/lib/$SNAPCRAFT_ARCH_TRIPLET:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/dri"
-      LIBGL_DRIVERS_PATH: "$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/dri"
+      LD_LIBRARY_PATH: "$SNAP/lib/python3.10/site-packages/katrain/KataGo:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET:$SNAP/lib/$SNAPCRAFT_ARCH_TRIPLET:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/dri:$SNAP/graphics/lib:$SNAP/graphics/usr/lib/$SNAPCRAFT_ARCH_TRIPLET"
+      LIBGL_DRIVERS_PATH: "$SNAP/graphics/dri:$SNAP/graphics/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/dri:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/dri"
