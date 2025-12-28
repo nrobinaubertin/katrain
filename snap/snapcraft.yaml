@@ -18,7 +18,17 @@ plugs:
     default-provider: mesa-core22
 
 parts:
+  katago-eigen:
+    plugin: dump
+    source: https://github.com/lightvector/KataGo/releases/download/v1.16.4/katago-v1.16.4-eigen-linux-x64.zip
+    source-type: zip
+    organize:
+      '*': katago-files/
+    stage:
+      - katago-files/*
+
   katrain:
+    after: [katago-eigen]
     plugin: python
     source: .
     build-packages:
@@ -45,6 +55,7 @@ parts:
       - pkg-config
       - zlib1g-dev
       - python3-venv
+      - wget
     stage-packages:
       - ffmpeg
       - freeglut3
@@ -55,20 +66,81 @@ parts:
       - libmtdev1
       - libpulse0
       - libstdc++6
+      - libzip4
       - mesa-opencl-icd
       - python3-venv
       - xclip
       - xsel
     override-build: |
       craftctl default
-      # Ensure KataGo binary is executable
-      KATAGO_DIR=$(find ${SNAPCRAFT_PART_INSTALL}/lib -type d -path "*/katrain/KataGo" | head -1)
-      if [ -n "$KATAGO_DIR" ]; then
-        echo "Found KataGo directory: $KATAGO_DIR"
-        chmod +x "$KATAGO_DIR"/katago
-        echo "KataGo binary is ready at $KATAGO_DIR/katago"
+
+      # Find the installed KaTrain package location
+      KATRAIN_PKG=$(find ${SNAPCRAFT_PART_INSTALL}/lib -type d -path "*/site-packages/katrain" -not -path "*/katrain/KataGo" | head -1)
+
+      if [ -z "$KATRAIN_PKG" ]; then
+        echo "ERROR: KaTrain package not found"
+        exit 1
+      fi
+
+      echo "Installing KataGo into: $KATRAIN_PKG"
+
+      # Create KataGo directory
+      KATAGO_DIR="$KATRAIN_PKG/KataGo"
+      mkdir -p "$KATAGO_DIR"
+
+      # Extract and copy KataGo binary from staged katago-eigen part
+      KATAGO_APPIMAGE=$(find ${SNAPCRAFT_STAGE}/katago-files -name "katago" -type f | head -1)
+
+      if [ -z "$KATAGO_APPIMAGE" ]; then
+        echo "ERROR: KataGo AppImage not found"
+        exit 1
+      fi
+
+      # Extract AppImage contents (KataGo is packaged as AppImage)
+      echo "Extracting KataGo AppImage..."
+      cd $(dirname "$KATAGO_APPIMAGE")
+      chmod +x katago
+      ./katago --appimage-extract > /dev/null 2>&1 || {
+        echo "ERROR: Failed to extract KataGo AppImage"
+        exit 1
+      }
+
+      # Copy the extracted binary
+      if [ -f squashfs-root/usr/bin/katago ]; then
+        cp squashfs-root/usr/bin/katago "$KATAGO_DIR/katago"
+      elif [ -f squashfs-root/katago ]; then
+        cp squashfs-root/katago "$KATAGO_DIR/katago"
       else
-        echo "Warning: KataGo directory not found"
+        echo "ERROR: Extracted katago binary not found"
+        ls -R squashfs-root/
+        exit 1
+      fi
+
+      chmod +x "$KATAGO_DIR/katago"
+      echo "KataGo binary extracted and installed: $KATAGO_DIR/katago"
+
+      # Clean up extraction directory
+      rm -rf squashfs-root
+
+      # Download analysis_config.cfg
+      echo "Downloading analysis_config.cfg..."
+      wget -q -O "$KATAGO_DIR/analysis_config.cfg" \
+        https://raw.githubusercontent.com/lightvector/KataGo/v1.16.4/cpp/configs/analysis_example.cfg
+
+      if [ ! -f "$KATAGO_DIR/analysis_config.cfg" ]; then
+        echo "ERROR: Failed to download analysis_config.cfg"
+        exit 1
+      fi
+
+      echo "analysis_config.cfg installed"
+
+      # Verify installation
+      ls -lh "$KATAGO_DIR"
+      if [ -x "$KATAGO_DIR/katago" ]; then
+        echo "KataGo installation verified"
+      else
+        echo "ERROR: KataGo binary not executable"
+        exit 1
       fi
 apps:
   katrain:
